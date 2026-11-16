@@ -492,6 +492,167 @@
                 </Grid>
             </TabItem>
 
+            <!-- ============== ВКЛАДКА 3: ЦИКЛЫ ============== -->
+            <TabItem Header="Циклы">
+                <Grid Margin="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" BorderBrush="#3333FF" BorderThickness="2"
+                            Padding="5" Margin="0,0,0,10" Background="#E6E6FA"
+                            Style="{StaticResource Card}">
+                        <TextBlock Text="Анализ циклов прошивки ночника" HorizontalAlignment="Center"
+                       FontSize="22" FontWeight="Bold"/>
+                    </Border>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Левая панель -->
+                        <Grid Grid.Column="0" Margin="0,0,5,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/> <!-- Выбор режима -->
+                                <RowDefinition Height="Auto"/> <!-- Генератор -->
+                                <RowDefinition Height="*"/>    <!-- Таблица массива -->
+                                <RowDefinition Height="Auto"/> <!-- Кнопки -->
+                                <RowDefinition Height="Auto"/> <!-- Индикатор Post -->
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Выбор режима -->
+                            <Border Grid.Row="0" BorderBrush="#3333FF" BorderThickness="1" Padding="6" Margin="0,0,0,5" Background="#F0F8FF" Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="Режим анализа:" FontSize="14" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <ComboBox x:Name="cmbLoopMode" Height="30" BorderBrush="#3333FF">
+                                        <ComboBoxItem Content="— выбрать режим —" Tag="None" IsSelected="True"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+                            <!-- Генератор массива -->
+                            <Border Grid.Row="1" BorderBrush="#3333FF" BorderThickness="1" Padding="6" Margin="0,0,0,5" Background="#F0F8FF" Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="Генератор массива показаний:" FontSize="14" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="n:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                        <TextBox x:Name="txtN" Grid.Column="1" Height="25" BorderBrush="#3333FF" Text="10"/>
+                                        <TextBlock Grid.Column="2" Text="min:" VerticalAlignment="Center" Margin="5,0,5,0"/>
+                                        <TextBox x:Name="txtMin" Grid.Column="3" Height="25" BorderBrush="#3333FF" Text="0"/>
+                                        <TextBlock Grid.Column="4" Text="max:" VerticalAlignment="Center" Margin="5,0,5,0"/>
+                                        <TextBox x:Name="txtMax" Grid.Column="5" Height="25" BorderBrush="#3333FF" Text="1000"/>
+                                        <TextBlock Grid.Column="6" Text="T:" VerticalAlignment="Center" Margin="5,0,5,0"/>
+                                        <TextBox x:Name="txtT" Grid.Column="7" Height="25" BorderBrush="#3333FF" Text="500"/>
+                                        <Button Grid.Column="8" Content="Сгенерировать" Click="GenerateArray_Click" Margin="5,0,0,0" Style="{StaticResource AnimatedButton}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                            <!-- Таблица массива -->
+                            <Border Grid.Row="2" BorderBrush="#3333FF" BorderThickness="1" Padding="2" Margin="0,0,0,5" Background="White" Style="{StaticResource Card}">
+                                <DataGrid x:Name="dgArray" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False"
+                                            BorderBrush="Transparent" Background="White" RowBackground="White" AlternatingRowBackground="#F0F8FF">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Индекс (i)" Binding="{Binding Index}" IsReadOnly="True" Width="*"/>
+                                        <DataGridTextColumn Header="Значение (a[i])" Binding="{Binding Value, Mode=TwoWay}" Width="2*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                            <!-- Кнопки управления -->
+                            <Grid Grid.Row="3" Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="▶ Пуск" Click="RunLoop_Click" Style="{StaticResource AnimatedButton}"/>
+                                <Button Grid.Column="1" Content="⏭ Шаг" Click="StepLoop_Click" Margin="5,0" Style="{StaticResource AnimatedButton}"/>
+                                <Button Grid.Column="2" Content="↺ Сброс" Click="ResetLoop_Click" Style="{StaticResource AnimatedButton}"/>
+                            </Grid>
+                            <!-- Индикатор Post -->
+                            <Border Grid.Row="4" BorderBrush="#3333FF" BorderThickness="2" Padding="8" Background="#E6E6FA" Style="{StaticResource Card}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Label x:Name="lblPostIndicator" Width="20" Height="20" Background="Gray" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Постусловие цикла:" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="txtPostStatus" Text=" — ожидание запуска" FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Правая панель -->
+                        <Grid Grid.Column="1" Margin="5,0,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/> <!-- Инвариант и вариант -->
+                                <RowDefinition Height="*"/> <!-- Проверка wp -->
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Инвариант и вариант -->
+                            <Border Grid.Row="0" BorderBrush="#3333FF" BorderThickness="1" Padding="8" Margin="0,0,0,5" Background="#F0F8FF" Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="Инвариант и вариант-функция" FontSize="16" FontWeight="Bold" Margin="0,0,0,8" HorizontalAlignment="Center"/>
+
+                                    <TextBlock Text="Инвариант (словами):" FontSize="12" FontWeight="Bold"/>
+                                    <TextBlock x:Name="txtInvHuman" Text="res хранит сумму элементов от 0 до j-1" FontSize="14" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Инвариант (формула):" FontSize="12" FontWeight="Bold"/>
+                                    <TextBlock x:Name="txtInvFormula" Text="res = Σa[i] ∧ 0 ≤ j ≤ n" FontSize="14" FontFamily="Consolas" Margin="0,0,0,8"/>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <Label x:Name="lblInvBefore" Width="15" Height="15" Background="Gray"  Margin="0,0,5,0"/>
+                                            <TextBlock Text="Inv до шага" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <Label x:Name="lblInvAfter" Width="15" Height="15" Background="Gray"  Margin="0,0,5,0"/>
+                                            <TextBlock Text="Inv после шага" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBlock Text="Вариант-функция t:" FontSize="12" FontWeight="Bold"/>
+                                    <TextBlock x:Name="txtVariant" Text="t = n - j = 10" FontSize="14" FontFamily="Consolas" Margin="0,0,0,4"/>
+                                    <ProgressBar x:Name="pbVariant" Height="20" Minimum="0" Maximum="100" Value="100" Margin="0,0,0,0"/>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Проверка сохранения инварианта -->
+                            <Border Grid.Row="1" BorderBrush="#3333FF" BorderThickness="1" Padding="8" Background="#F0F8FF" Style="{StaticResource Card}">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="Проверка сохранения инварианта" FontSize="16" FontWeight="Bold" Margin="0,0,0,8" HorizontalAlignment="Center"/>
+
+                                        <TextBlock Text="Формула:" FontSize="12" FontWeight="Bold"/>
+                                        <TextBlock Text="(Inv ∧ B) ⇒ wp(S, Inv)" FontSize="16" FontFamily="Consolas" Foreground="#3333FF" Margin="0,0,0,8"/>
+
+                                        <TextBlock Text="Разбор:" FontSize="12" FontWeight="Bold"/>
+                                        <TextBlock x:Name="txtWpExplanation" Text="Если инвариант верен и условие цикла истинно, то после выполнения тела цикла инвариант останется верен." FontSize="13" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                                        <TextBlock Text="Результат wp (из ЛР-2):" FontSize="12" FontWeight="Bold"/>
+                                        <Border BorderBrush="#3333FF" BorderThickness="1" Background="White" Padding="5" CornerRadius="4">
+                                            <TextBlock x:Name="txtWpResult" Text="— нажмите 'Шаг' для вычисления —" FontSize="13" FontFamily="Consolas" TextWrapping="Wrap"/>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Grid>
+                  
+            </TabItem>
+
         </TabControl>
     </Grid>
 </Window>

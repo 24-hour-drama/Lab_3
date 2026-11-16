@@ -101,6 +101,8 @@ namespace Forms1
             el.BeginAnimation(OpacityProperty, anim);
         }
 
+        
+
         #region
         // -----------------НОЧНИК-----------------
         // ОСНОВА ДЛЯ ВЫБОРА ОПЕРАЦИИ ИЗ СПИСКА
@@ -296,7 +298,7 @@ namespace Forms1
                 default:
                     indColor = 2;
                     break;
-            }       
+            }
             cmb_colors.SelectedIndex = indColor;
 
             cmb_colors.SelectionChanged += cmb_colors_selectionChanged;
@@ -688,7 +690,7 @@ namespace Forms1
 
                 }
             }
-            
+
         }
 
         /// <summary>
@@ -810,10 +812,10 @@ namespace Forms1
             string token = t[p++];
 
             // Рекурсивный вызов для выражений в скобках (сброс приоритета)
-            if (token == "(") 
-            { var expr = ParseOr(t, ref p); 
-                if (p < t.Count && t[p] == ")")  p++; 
-                return expr; 
+            if (token == "(")
+            { var expr = ParseOr(t, ref p);
+                if (p < t.Count && t[p] == ")") p++;
+                return expr;
             }
 
             // Если токен является числом
@@ -922,5 +924,8 @@ namespace Forms1
             return new Assignment(parts[0].Trim(), ParseExpression(parts[1].Trim()));
         }
         #endregion
+
+        
+    
     }
 }
