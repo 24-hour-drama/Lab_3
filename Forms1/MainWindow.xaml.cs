@@ -101,7 +101,27 @@ namespace Forms1
             el.BeginAnimation(OpacityProperty, anim);
         }
 
-        
+        // ----------------Циклы------------------//
+
+        private void GenerateArray_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("В процессе");
+        }
+
+        private void RunLoop_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("В процессе");
+        }
+
+        private void StepLoop_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("В процессе");
+        }
+
+        private void ResetLoop_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("В процессе");
+        }
 
         #region
         // -----------------НОЧНИК-----------------
