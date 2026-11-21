@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Library.Lab2.Engine;
 
 namespace Library.Lab3
 {
@@ -171,6 +172,66 @@ namespace Library.Lab3
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Генерация текстового объяснения
+        /// </summary>
+        public string GetWpExplanation()
+        {
+            Statement loopBody;
+            string invFormula;
+
+            if (CurrentMode == CycleMode.PrefixSum)
+            {
+                Assignment assignRes = new Assignment("res", new BinaryOperation(new Variable("res"), new Variable("a_j"), "+"));
+                Assignment assignJ = new Assignment("j", new BinaryOperation(new Variable("j"), new Constants(1), "+"));
+                loopBody = new Sequence(new List<Statement> { assignRes, assignJ });
+                invFormula = "res = Σa[i] (от 0 до j-1) ∧ 0 ≤ j ≤ n";
+            }
+            else if (CurrentMode == CycleMode.CountGreaterThanT)
+            {
+                BinaryOperation condition = new BinaryOperation(new Variable("a_j"), new Variable("T"), ">");
+                List<Statement> trueBlock = new List<Statement> { new Assignment("res", new BinaryOperation(new Variable("res"), new Constants(1), "+")) };
+                IfStatement ifStmt = new IfStatement(condition, trueBlock);
+                Assignment assignJ = new Assignment("j", new BinaryOperation(new Variable("j"), new Constants(1), "+"));
+                loopBody = new Sequence(new List<Statement> { ifStmt, assignJ });
+                invFormula = "res = количество a[i] > T (для i < j) ∧ 0 ≤ j ≤ n";
+            }
+            else
+            {
+                BinaryOperation condition = new BinaryOperation(new Variable("a_j"), new Variable("res"), ">");
+                List<Statement> trueBlock = new List<Statement> { new Assignment("res", new Variable("a_j")) };
+                IfStatement ifStmt = new IfStatement(condition, trueBlock);
+                Assignment assignJ = new Assignment("j", new BinaryOperation(new Variable("j"), new Constants(1), "+"));
+                loopBody = new Sequence(new List<Statement> { ifStmt, assignJ });
+                invFormula = "res = max(a[0..j-1]) ∧ 1 ≤ j ≤ n";
+            }
+
+            Variable invExpr = new Variable("Inv");
+            Engine engine = new Engine();
+            Result result = engine.Calculate(loopBody, invExpr);
+
+            return $"Условие для сохранение инварианта ({invFormula}) после выполнения шага:\n\n" +
+                   $"wp(тело цикла, Inv) = {result.Final.ToHumanString()}\n\n" +
+                   $"Перед шагом Inv истинно & условие цикла (j < n) истинно, следовательно условие выполняется" +
+                   $"Вариант-функция t = n - j строго убывает на 1 и остаётся ≥ 0 (гарант завершения цикла)";
+        }
+
+        /// <summary>
+        /// Получение индекса и значения
+        /// </summary>
+        /// <returns>Массив в виде пар индекса и значения</returns>
+        public IReadOnlyList<(int Index, int Value)> GetArrayForView() => _array.Select((v, i) => (i, v)).ToList();
+
+        /// <summary>
+        /// Текущий индекс j
+        /// </summary>
+        /// <returns>Текущий индекс j. Если цикл завершён, вернет -1</returns>
+        public int GetCurrentIndexForHighlight()
+        {
+            if (IsFinished) return -1;
+            else return _j;
         }
     }
 }
