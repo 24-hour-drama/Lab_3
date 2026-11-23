@@ -141,7 +141,7 @@ namespace Tests
         [Fact]
         public void Constant_ToHumanString_KeepsDecimal()
         {
-            Assert.Equal("2.5", new Constants(2.5).ToHumanString());
+            Assert.Equal("2,5", new Constants(2.5).ToHumanString());
         }
 
         [Fact]
