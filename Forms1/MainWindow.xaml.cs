@@ -7,6 +7,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using Library.Lab3;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Forms1
 {
     /// <summary>
@@ -23,6 +29,14 @@ namespace Forms1
         List<string> colors = new List<string> { "Warm white", "Cold white", "White" };
         string pre_txt = "";
         string post_txt = "";
+        // ------ Поля для вкладки «Циклы» ------
+        private CycleAnalyzerService _cycleService = new CycleAnalyzerService();
+        private ObservableCollection<ArrayItem> _arrayData = new ObservableCollection<ArrayItem>();
+        private CycleMode _selectedMode = CycleMode.None;
+        private bool _loopInitialized = false;
+        private int[] _initSnapshot;
+        private bool _isRunning = false;
+        private CancellationTokenSource _runCts;
 
         private string currentHoareTriple = "";
         public MainWindow()
@@ -47,6 +61,20 @@ namespace Forms1
                 cmbPresets.Items.Add(new ComboBoxItem { Content = "6. Обмен порогов", Tag = "CalibrationSwap" });
                 cmbPresets.SelectedIndex = 0;
             }
+
+            // ------ Вкладка «Циклы» ------
+            if (dgArray != null)
+                dgArray.ItemsSource = _arrayData; // привязывает коллекцию _arrayData к таблице DataGrid
+
+            if (cmbLoopMode != null)
+            {
+                cmbLoopMode.Items.Add(new ComboBoxItem { Content = "Сумма префикса (PrefixSum)", Tag = "PrefixSum" });
+                cmbLoopMode.Items.Add(new ComboBoxItem { Content = "Счётчик элементов > T (CountGreaterThanT)", Tag = "CountGreaterThanT" });
+                cmbLoopMode.Items.Add(new ComboBoxItem { Content = "Максимум префикса (PrefixMax)", Tag = "PrefixMax" });
+                cmbLoopMode.SelectionChanged += CmbLoopMode_SelectionChanged;
+            }
+
+            GenerateArrayInternal();
         }
 
         // Плавное появление окна при запуске
@@ -103,24 +131,397 @@ namespace Forms1
 
         // ----------------Циклы------------------//
 
+        // Проверяет корректность введенных пользователем параметров для генератора
+        private bool ValidateInputParameters(out int n, out int min, out int max, out int t)
+        {
+            n = 0; min = 0; max = 0; t = 0;
+
+            // 1. Проверка N (длина массива)
+            if (!int.TryParse(txtN.Text, out n))
+            {
+                MessageBox.Show("Поле 'n' должно быть целым числом.", "Ошибка ввода", MessageBoxButton.OK, MessageBoxImage.Error);
+                txtN.Focus();
+                return false;
+            }
+            if (n <= 0)
+            {
+                MessageBox.Show("Длина массива 'n' должна быть больше нуля.", "Ошибка ввода", MessageBoxButton.OK, MessageBoxImage.Error);
+                txtN.Focus();
+                return false;
+            }
+            if (n > 10000) // Защита от зависания DataGrid
+            {
+                MessageBox.Show("Слишком большая длина массива (максимум 10 000).", "Ошибка ввода", MessageBoxButton.OK, MessageBoxImage.Error);
+                txtN.Focus();
+                return false;
+            }
+
+            // 2. Проверка Min и Max
+            if (!int.TryParse(txtMin.Text, out min) || !int.TryParse(txtMax.Text, out max))
+            {
+                MessageBox.Show("Границы диапазона (min, max) должны быть целыми числами.", "Ошибка ввода", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            if (min >= max)
+            {
+                MessageBox.Show("Минимальное значение (min) должно быть строго меньше максимального (max).", "Ошибка ввода", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            // 3. Проверка порога T (только если выбран режим CountGreaterThanT)
+            if (!int.TryParse(txtT.Text, out t))
+            {
+                MessageBox.Show("Порог 'T' должен быть целым числом.", "Ошибка ввода", MessageBoxButton.OK, MessageBoxImage.Error);
+                txtT.Focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        // Генерация массива
+        private void GenerateArrayInternal()
+        {
+            if (!ValidateInputParameters(out int n, out int min, out int max, out int t))
+            {
+                return; // Прерываем генерацию, если данные неверные
+            }
+
+            var rng = new Random();
+            _arrayData.Clear();
+            for (int i = 0; i < n; i++)
+            {
+                _arrayData.Add(new ArrayItem { Index = i, Value = rng.Next(min, max + 1) });
+            }
+
+            _loopInitialized = false;
+            _initSnapshot = null;
+            ResetIndicators();
+            if (_selectedMode != CycleMode.None)
+                UpdateWpDisplay();
+        }
+
+        // Выбор режима
+        private void CmbLoopMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Извлекает Tag из выбранного элемента ComboBox
+            string tag = (cmbLoopMode.SelectedItem as ComboBoxItem)?.Tag as string ?? "None";
+
+            // Сопоставляет строку с элементом перечисления
+            switch (tag)
+            {
+                case "PrefixSum": _selectedMode = CycleMode.PrefixSum; break;
+                case "CountGreaterThanT": _selectedMode = CycleMode.CountGreaterThanT; break;
+                case "PrefixMax": _selectedMode = CycleMode.PrefixMax; break;
+                default: _selectedMode = CycleMode.None; break;
+            }
+
+            _loopInitialized = false;
+            _initSnapshot = null;
+
+            UpdateInvariantDisplay();
+            ResetIndicators();
+
+            // Если выбран не "None", заново рассчитывает wp для нового тела цикла
+            if (_selectedMode != CycleMode.None)
+                UpdateWpDisplay();
+        }
+
         private void GenerateArray_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("В процессе");
+            GenerateArrayInternal();
         }
 
-        private void RunLoop_Click(object sender, RoutedEventArgs e)
+        // Автоматическое выполнение цикла
+        private async void RunLoop_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("В процессе");
+            var btn = sender as Button;
+
+            if (_isRunning)
+            {
+                _runCts?.Cancel();
+                return;
+            }
+
+            if (!EnsureInitialized()) return;
+
+            _isRunning = true;
+            if (btn != null) btn.Content = "⏸ Пауза";
+
+            // Блокируем только кнопку Сброс
+            SetResetButtonEnabled(sender, false);
+
+            _runCts = new CancellationTokenSource();
+            var token = _runCts.Token;
+
+            try
+            {
+                while (!_cycleService.IsFinished && !token.IsCancellationRequested)
+                {
+                    DoOneStep();
+                    await Task.Delay(350, token);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Игнорируем отмену
+            }
+            finally
+            {
+                _isRunning = false;
+                if (btn != null) btn.Content = "▶ Пуск";
+
+                // Разблокируем кнопку Сброс
+                SetResetButtonEnabled(sender, true);
+
+                _runCts?.Dispose();
+                _runCts = null;
+            }
         }
 
-        private void StepLoop_Click(object sender, RoutedEventArgs e)
+        // Один шаг цикла
+        private async void StepLoop_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("В процессе");
+            // Если идет автозапуск, ставим его на паузу
+            if (_isRunning)
+            {
+                _runCts?.Cancel();
+
+                // Ждем, пока фоновый цикл полностью завершится (_isRunning станет false)
+                while (_isRunning)
+                {
+                    await Task.Delay(10); // Небольшая пауза, чтобы не нагружать процессор
+                }
+            }
+
+            if (!EnsureInitialized()) return;
+            if (_cycleService.IsFinished) { UpdatePostStatus(); return; }
+
+            DoOneStep();
         }
 
+        // Сбрасывает выполнение цикла в начальное состояние
         private void ResetLoop_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("В процессе");
+            if (_isRunning) return;
+            _loopInitialized = false;
+            _initSnapshot = null;
+            ResetIndicators();
+            UpdateInvariantDisplay();
+            if (_selectedMode != CycleMode.None) UpdateWpDisplay();
+        }
+
+        // Блокирует кнопку Сброс во время автозапуска, оставляя Шаг активным
+        private void SetResetButtonEnabled(object sender, bool isEnabled)
+        {
+            if (sender is Button runButton && runButton.Parent is Grid buttonGrid)
+            {
+                foreach (var child in buttonGrid.Children)
+                {
+                    if (child is Button btn && btn != runButton && btn.Content.ToString().Contains("Сброс"))
+                    {
+                        btn.IsEnabled = isEnabled;
+                    }
+                }
+            }
+        }
+
+        /// <summary>Один шаг: проверка Inv до/после + обновление всех индикаторов.</summary>
+        private void DoOneStep()
+        {
+            // Инвариант до шага
+            bool invBefore = _cycleService.CheckInvariantLogic();
+            lblInvBefore.Background = invBefore ? Brushes.Green : Brushes.Red;
+
+            int oldT = _cycleService.VariantT;
+
+            // Сам шаг 
+            _cycleService.Step();
+
+            // Инвариант после шага
+            bool invAfter = _cycleService.CheckInvariantLogic();
+            lblInvAfter.Background = invAfter ? Brushes.Green : Brushes.Red;
+
+            UpdateVariantDisplay();
+            UpdatePostStatus();
+
+            // Лог убывания t
+            int newT = _cycleService.VariantT;
+            if (newT >= oldT || newT < 0)
+            {
+                // инвариант завершения нарушен
+                txtVariant.Text += "  ⚠ t не убывает!";
+            }
+        }
+
+        // Готовит сервис к работе при первом шаге
+        private bool EnsureInitialized()
+        {
+            if (_selectedMode == CycleMode.None)
+            {
+                MessageBox.Show("Сначала выберите режим анализа во вкладке «Циклы».",
+                    "Режим не выбран", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            // Проверяем, что текущие поля ввода все еще корректны
+            if (!ValidateInputParameters(out _, out _, out _, out int threshold))
+            {
+                return false;
+            }
+
+            // Если массив отредактировали после инициализации — перезапускаем
+            if (_loopInitialized && _initSnapshot != null && DataChangedSinceInit())
+                _loopInitialized = false;
+
+            if (!_loopInitialized)
+            {
+                int[] values = new int[_arrayData.Count];
+                for (int i = 0; i < _arrayData.Count; i++) values[i] = _arrayData[i].Value;
+
+                _cycleService.Initialize(_selectedMode, values, threshold);
+                _initSnapshot = (int[])values.Clone();
+                _loopInitialized = true;
+
+                bool invOk = _cycleService.CheckInvariantLogic();
+                lblInvBefore.Background = invOk ? Brushes.Green : Brushes.Red;
+                lblInvAfter.Background = Brushes.Gray;
+
+                UpdateVariantDisplay();
+                UpdatePostStatus();
+                UpdateWpDisplay();
+            }
+
+            return true;
+        }
+
+        private bool DataChangedSinceInit()
+        {
+            if (_initSnapshot == null || _initSnapshot.Length != _arrayData.Count) return true;
+            for (int i = 0; i < _arrayData.Count; i++)
+                if (_arrayData[i].Value != _initSnapshot[i]) return true;
+            return false;
+        }
+
+        // Обновление индикаторов
+        private void UpdateInvariantDisplay()
+        {
+            switch (_selectedMode)
+            {
+                case CycleMode.PrefixSum:
+                    txtInvHuman.Text = "res хранит сумму элементов a[0..j-1]";
+                    txtInvFormula.Text = "res = Σ a[i] (i от 0 до j-1)  ∧  0 ≤ j ≤ n";
+                    break;
+                case CycleMode.CountGreaterThanT:
+                    txtInvHuman.Text = "res хранит количество элементов a[0..j-1], превышающих T";
+                    txtInvFormula.Text = "res = |{ i < j : a[i] > T }|  ∧  0 ≤ j ≤ n";
+                    break;
+                case CycleMode.PrefixMax:
+                    txtInvHuman.Text = "res хранит максимум элементов a[0..j-1]";
+                    txtInvFormula.Text = "res = max(a[0..j-1])  ∧  1 ≤ j ≤ n";
+                    break;
+                default:
+                    txtInvHuman.Text = "— выберите режим —";
+                    txtInvFormula.Text = "—";
+                    break;
+            }
+        }
+
+        private void UpdateVariantDisplay()
+        {
+            int n = _cycleService.N;
+            int j = _cycleService.J;
+            int t = _cycleService.VariantT;
+
+            txtVariant.Text = $"t = n - j = {n} - {j} = {t}";
+            pbVariant.Maximum = Math.Max(1, n);
+            pbVariant.Value = Math.Max(0, t);
+        }
+
+        private void UpdatePostStatus()
+        {
+            if (_cycleService.IsFinished)
+            {
+                bool ok = _cycleService.CheckPostcondition();
+                lblPostIndicator.Background = ok ? Brushes.Green : Brushes.Red;
+                txtPostStatus.Text = ok ? " — Постусловие выполнено ✓" : " — Постусловие НЕ выполнено ✗";
+            }
+            else
+            {
+                lblPostIndicator.Background = Brushes.Gray;
+                txtPostStatus.Text = " — цикл не завершён";
+            }
+        }
+
+        private void ResetIndicators()
+        {
+            lblInvBefore.Background = Brushes.Gray;
+            lblInvAfter.Background = Brushes.Gray;
+            lblPostIndicator.Background = Brushes.Gray;
+            txtPostStatus.Text = " — ожидание запуска";
+            txtVariant.Text = "t = n - j = —";
+            pbVariant.Value = 0;
+            txtWpResult.Text = "— нажмите 'Шаг' для вычисления —";
+        }
+
+        private void UpdateWpDisplay()
+        {
+            Statement body = BuildLoopBodyForMode(_selectedMode);
+            if (body == null) return;
+
+            try
+            {
+                var engine = new Engine();
+                Engine.Result result = engine.Calculate(body, new Variable("Inv"));
+
+                txtWpResult.Text = $"(Inv ∧ j < n)  ⇒  wp(S, Inv)\n= {result.Final.Simplify().ToMathString()}";
+                txtWpExplanation.Text = _cycleService.GetWpExplanation();
+            }
+            catch (Exception ex)
+            {
+                txtWpResult.Text = "Ошибка: " + ex.Message;
+            }
+        }
+
+        // Тело цикла S для каждого режима (совпадает с GetWpExplanation)
+        private Statement BuildLoopBodyForMode(CycleMode mode)
+        {
+            switch (mode)
+            {
+                case CycleMode.PrefixSum:
+                    return new Sequence(new List<Statement>
+            {
+                new Assignment("res", new BinaryOperation(new Variable("res"), new Variable("a_j"), "+")),
+                new Assignment("j",   new BinaryOperation(new Variable("j"),   new Constants(1),   "+"))
+            });
+
+                case CycleMode.CountGreaterThanT:
+                    return new Sequence(new List<Statement>
+            {
+                new IfStatement(
+                    new BinaryOperation(new Variable("a_j"), new Variable("T"), ">"),
+                    new List<Statement>
+                    {
+                        new Assignment("res", new BinaryOperation(new Variable("res"), new Constants(1), "+"))
+                    }),
+                new Assignment("j", new BinaryOperation(new Variable("j"), new Constants(1), "+"))
+            });
+
+                case CycleMode.PrefixMax:
+                    return new Sequence(new List<Statement>
+            {
+                new IfStatement(
+                    new BinaryOperation(new Variable("a_j"), new Variable("res"), ">"),
+                    new List<Statement>
+                    {
+                        new Assignment("res", new Variable("a_j"))
+                    }),
+                new Assignment("j", new BinaryOperation(new Variable("j"), new Constants(1), "+"))
+            });
+
+                default:
+                    return null;
+            }
         }
 
         #region
@@ -947,5 +1348,13 @@ namespace Forms1
 
         
     
+    }
+    /// <summary>
+    /// Простая обёртка для привязки DataGrid на вкладке «Циклы».
+    /// </summary>
+    public class ArrayItem
+    {
+        public int Index { get; set; }
+        public int Value { get; set; }
     }
 }
