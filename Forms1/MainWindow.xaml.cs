@@ -68,11 +68,13 @@ namespace Forms1
 
             if (cmbLoopMode != null)
             {
-                cmbLoopMode.Items.Add(new ComboBoxItem { Content = "Сумма префикса (PrefixSum)", Tag = "PrefixSum" });
-                cmbLoopMode.Items.Add(new ComboBoxItem { Content = "Счётчик элементов > T (CountGreaterThanT)", Tag = "CountGreaterThanT" });
-                cmbLoopMode.Items.Add(new ComboBoxItem { Content = "Максимум префикса (PrefixMax)", Tag = "PrefixMax" });
                 cmbLoopMode.SelectionChanged += CmbLoopMode_SelectionChanged;
+
+                // Обработка режима, выбранного по умолчанию
+                CmbLoopMode_SelectionChanged(cmbLoopMode, null);
             }
+
+            GenerateArrayInternal();
 
             GenerateArrayInternal();
         }
@@ -130,6 +132,13 @@ namespace Forms1
         }
 
         // ----------------Циклы------------------//
+
+        // Обновление текущего индекса и результата цикла
+        private void UpdateCurrentValues()
+        {
+            txtCurrentJ.Text = _cycleService.J.ToString();
+            txtCurrentRes.Text = _cycleService.Result.ToString();
+        }
 
         // Проверяет корректность введенных пользователем параметров для генератора
         private bool ValidateInputParameters(out int n, out int min, out int max, out int t)
@@ -211,7 +220,10 @@ namespace Forms1
             switch (tag)
             {
                 case "PrefixSum": _selectedMode = CycleMode.PrefixSum; break;
-                case "CountGreaterThanT": _selectedMode = CycleMode.CountGreaterThanT; break;
+                case "Count":
+                case "CountGreaterThanT":
+                    _selectedMode = CycleMode.CountGreaterThanT;
+                    break;
                 case "PrefixMax": _selectedMode = CycleMode.PrefixMax; break;
                 default: _selectedMode = CycleMode.None; break;
             }
@@ -335,8 +347,11 @@ namespace Forms1
 
             int oldT = _cycleService.VariantT;
 
-            // Сам шаг 
+            // Сам шаг
             _cycleService.Step();
+
+            // Обновление текущего индекса и результата
+            UpdateCurrentValues();
 
             // Инвариант после шага
             bool invAfter = _cycleService.CheckInvariantLogic();
@@ -349,7 +364,6 @@ namespace Forms1
             int newT = _cycleService.VariantT;
             if (newT >= oldT || newT < 0)
             {
-                // инвариант завершения нарушен
                 txtVariant.Text += "  ⚠ t не убывает!";
             }
         }
@@ -387,6 +401,7 @@ namespace Forms1
                 lblInvBefore.Background = invOk ? Brushes.Green : Brushes.Red;
                 lblInvAfter.Background = Brushes.Gray;
 
+                UpdateCurrentValues();
                 UpdateVariantDisplay();
                 UpdatePostStatus();
                 UpdateWpDisplay();
@@ -462,6 +477,9 @@ namespace Forms1
             txtVariant.Text = "t = n - j = —";
             pbVariant.Value = 0;
             txtWpResult.Text = "— нажмите 'Шаг' для вычисления —";
+
+            txtCurrentJ.Text = "0";
+            txtCurrentRes.Text = "0";
         }
 
         private void UpdateWpDisplay()
