@@ -232,11 +232,30 @@ namespace Forms1
             _initSnapshot = null;
 
             UpdateInvariantDisplay();
+            UpdateModeDescription();
             ResetIndicators();
 
             // Если выбран не "None", заново рассчитывает wp для нового тела цикла
             if (_selectedMode != CycleMode.None)
                 UpdateWpDisplay();
+        }
+        private void UpdateModeDescription()
+        {
+            switch (_selectedMode)
+            {
+                case CycleMode.PrefixSum:
+                    txtModeDescription.Text = "Считает суммарную освещённость за ночь — нужно для статистики энергопотребления.";
+                    break;
+                case CycleMode.CountGreaterThanT:
+                    txtModeDescription.Text = "Подсчитывает, сколько раз свет превышал порог T — нужно для определения «дневных» интервалов.";
+                    break;
+                case CycleMode.PrefixMax:
+                    txtModeDescription.Text = "Находит пиковое значение освещённости — нужно для калибровки максимальной яркости ночника.";
+                    break;
+                default:
+                    txtModeDescription.Text = "— выберите режим —";
+                    break;
+            }
         }
 
         private void GenerateArray_Click(object sender, RoutedEventArgs e)

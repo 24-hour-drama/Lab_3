@@ -182,6 +182,15 @@ namespace Library.Lab3
             Statement loopBody;
             string invFormula;
 
+            //Формирования человеческого описания
+            string modeDescription = CurrentMode switch
+            {
+                CycleMode.PrefixSum => "Алгоритм суммирует показания фоторезистора за ночь. ",
+                CycleMode.CountGreaterThanT => "Алгоритм считает, сколько раз освещённость превышала порог T (дневные интервалы). ",
+                CycleMode.PrefixMax => "Алгоритм ищет пиковое значение освещённости для калибровки яркости. ",
+                _ => ""
+            };
+
             if (CurrentMode == CycleMode.PrefixSum)
             {
                 Assignment assignRes = new Assignment("res", new BinaryOperation(new Variable("res"), new Variable("a_j"), "+"));
@@ -212,10 +221,16 @@ namespace Library.Lab3
             Engine engine = new Engine();
             Result result = engine.Calculate(loopBody, invExpr);
 
-            return $"Условие для сохранение инварианта ({invFormula}) после выполнения шага:\n\n" +
+            return modeDescription +
+                   $"Условие для сохранения инварианта ({invFormula}) после выполнения шага:\n" +
+                   $"wp(тело цикла, Inv) = {result.Final.ToHumanString()}\n" +
+                   $"Перед шагом Inv истинно и условие цикла (j < n) истинно, следовательно условие выполняется.\n" +
+                   $"Вариант-функция t = n - j строго убывает на 1 и остаётся ≥ 0 (гарант завершения цикла).";
+
+            /*return $"Условие для сохранение инварианта ({invFormula}) после выполнения шага:\n\n" +
                    $"wp(тело цикла, Inv) = {result.Final.ToHumanString()}\n\n" +
                    $"Перед шагом Inv истинно & условие цикла (j < n) истинно, следовательно условие выполняется" +
-                   $"Вариант-функция t = n - j строго убывает на 1 и остаётся ≥ 0 (гарант завершения цикла)";
+                   $"Вариант-функция t = n - j строго убывает на 1 и остаётся ≥ 0 (гарант завершения цикла)";*/
         }
 
         /// <summary>
