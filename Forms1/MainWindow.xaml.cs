@@ -420,7 +420,7 @@ namespace Forms1
 
             // Инвариант после шага
             bool invAfter = _cycleService.CheckInvariantLogic();
-            lblInvAfter.Background = invAfter ? Brushes.Green : Brushes.Red;
+            lblInvAfter.Background = _cycleService.IsFinished ? Brushes.Red : invAfter ? Brushes.Green : Brushes.Red;
 
             UpdateVariantDisplay();
             UpdatePostStatus();
