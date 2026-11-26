@@ -502,8 +502,23 @@
                     <Border Grid.Row="0" BorderBrush="#3333FF" BorderThickness="2"
                             Padding="5" Margin="0,0,0,10" Background="#E6E6FA"
                             Style="{StaticResource Card}">
-                        <TextBlock Text="Анализ циклов прошивки ночника" HorizontalAlignment="Center"
-                       FontSize="22" FontWeight="Bold"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" 
+                                           Text="Анализ циклов прошивки ночника" 
+                                           HorizontalAlignment="Center"
+                                           FontSize="22" FontWeight="Bold"/>
+                            <Button Grid.Column="1" 
+                                    Content="❓ Справка" 
+                                    Click="Help_Click" 
+                                    Style="{StaticResource AnimatedButton}"
+                                    Margin="10,0,0,0"
+                                    Padding="12,6"
+                                    />
+                        </Grid>
                     </Border>
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
